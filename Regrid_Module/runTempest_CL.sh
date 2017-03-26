@@ -57,7 +57,7 @@ else
 fi
 
 # output file name
-llStr=lon${nLon}_lat${nLat} 
+llStr=${nLon}x${nLat} 
 out_ll=${llStr}_${gridtype}.g #grid type belongs to RLL mesh
 out_cs=c${nC}.g
 out_ov=${llStr}-and-c${nC}.g #overlap mesh. can be used for both C2L and L2C
@@ -71,13 +71,13 @@ cd $tempestdir/bin
 ./GenerateOverlapMesh --a ${out_ll} --b ${out_cs} --out ${out_ov}
 
 if $isC2L;then
-    out_c2l=c${nC}-to-${llStr}_MAP_${gridtype}.nc
+    out_c2l=c${nC}-to-${llStr}_${gridtype}.nc
     ./GenerateOfflineMap --in_mesh ${out_cs} --out_mesh ${out_ll} --ov_mesh ${out_ov} --in_np 1 --out_map ${out_c2l}
     mv ${out_c2l} ${outdest}
 fi
 
 if $isL2L;then
-    out_l2c=${llStr}-to-c${nC}_MAP_${gridtype}.nc
+    out_l2c=${llStr}-to-c${nC}_${gridtype}.nc
     ./GenerateOfflineMap --in_mesh ${out_ll} --out_mesh ${out_cs} --ov_mesh ${out_ov} --in_np 1 --out_map ${out_l2c}
     mv ${out_l2c} ${outdest}
 fi
