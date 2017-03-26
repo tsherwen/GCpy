@@ -1,5 +1,7 @@
 """
 PURPOSE:
+    This module assumes all data are already on the same Lat-Lon Grid
+    
     GEOSChem/GCHP python benchmark tool. 
 
 NOTES:
