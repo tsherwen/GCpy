@@ -195,7 +195,7 @@ class C2L(object):
                 ndim = 3 # now it is a 3D array
                 outdata = np.zeros([self.Nlat,self.Nlon])
             else:
-                raise ValueError('2D input field should have the size (6*Nx,Nx) or (6,Nx,Nx)')
+                raise ValueError('2D input array should have the size (6*Nx,Nx)')
         elif ndim == 3:
             if sp == (6, self.Nx, self.Nx): 
                 # [6,Nx,NX]: 2D field with 6 panels being a separate dimension 
@@ -213,13 +213,14 @@ class C2L(object):
                 ndim = 4 # now it is a 4D array
                 outdata = np.zeros([sp[0],self.Nlat,self.Nlon])
             else:
-                raise ValueError('2D input field should have the size (6*Nx,Nx) or (6,Nx,Nx)')
+                raise ValueError('3D input array should have the size of'+ 
+                        '[6,Nx,Nx](2D field) or [Nlev,6*Nx,Nx](3d field)')
         elif ndim == 4:
             if (sp[0],sp[2],sp[3]) == (6,self.Nx,self.Nx):
                 # [6,Nlev,Nx,Nx]: 3D field with 6 panels being a separate dimension
                 outdata = np.zeros([sp[1],self.Nlat,self.Nlon])
             else:
-                raise ValueError('3D input data should have the size (6,Nlev,Nx,Nx)')
+                raise ValueError('4D input array should have the size [6,Nlev,Nx,Nx](3d field)')
         else:
             raise ValueError('invalid dimension of input data')
 
