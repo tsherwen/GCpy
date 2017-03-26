@@ -188,14 +188,38 @@ class C2L(object):
         # Can be extended to 4D data (contains time) if necessary.
         ndim = np.ndim(indata)
         sp = np.shape(indata)
-        if ndim == 3:
-            if sp != (6,self.Nx,self.Nx): 
-                raise ValueError('input data should have the size (6,Nx,Nx)')
-            outdata = np.zeros([self.Nlat,self.Nlon])
+        if ndim == 2:
+            if sp == (6*self.Nx, self.Nx):
+                # [6*Nx,6]: 2D field with 6 panels squeezed to y-axis
+                indata = np.reshape(indata,[6,self.Nx,self.Nx]) # separate the panel axis
+                ndim = 3 # now it is a 3D array
+                outdata = np.zeros([self.Nlat,self.Nlon])
+            else:
+                raise ValueError('2D input field should have the size (6*Nx,Nx) or (6,Nx,Nx)')
+        elif ndim == 3:
+            if sp == (6, self.Nx, self.Nx): 
+                # [6,Nx,NX]: 2D field with 6 panels being a separate dimension 
+                outdata = np.zeros([self.Nlat,self.Nlon])
+            elif (sp[1],sp[2]) == (6*self.Nx, self.Nx):
+                # [Nlev,6*Nx,Nx]: 3D field with 6 panels squeezed to y-axis
+
+                # separate the panel axis
+                # only use np.reshape will mess up the axes. so we do two steps
+                # [Nlev,6*Nx,Nx] -> [Nlev,6,Nx,Nx] (we have to reshape adjacent dimensions first)
+                indata = np.reshape(indata,[sp[0],6,self.Nx,self.Nx])
+                # [Nlev,6,Nx,Nx] -> [6,Nlev,Nx,Nx] (then swap dimensions)
+                indata = np.swapaxes(indata,0,1)
+
+                ndim = 4 # now it is a 4D array
+                outdata = np.zeros([sp[0],self.Nlat,self.Nlon])
+            else:
+                raise ValueError('2D input field should have the size (6*Nx,Nx) or (6,Nx,Nx)')
         elif ndim == 4:
-            if (sp[0],sp[2],sp[3]) != (6,self.Nx,self.Nx):
+            if (sp[0],sp[2],sp[3]) == (6,self.Nx,self.Nx):
+                # [6,Nlev,Nx,Nx]: 3D field with 6 panels being a separate dimension
+                outdata = np.zeros([sp[1],self.Nlat,self.Nlon])
+            else:
                 raise ValueError('3D input data should have the size (6,Nlev,Nx,Nx)')
-            outdata = np.zeros([sp[1],self.Nlat,self.Nlon])
         else:
             raise ValueError('invalid dimension of input data')
 
