@@ -182,11 +182,22 @@ class C2L(object):
         regrid indata to outdata online
         '''
         # check input data dimension
-        if np.shape(indata) != (6,self.Nx,self.Nx): 
-            raise ValueError('input data should have the size (6,Nx,Nx)')
-
-        # array for output data
-        outdata = np.zeros([self.Nlat,self.Nlon])
+        # We have to make use of numpy vectorization to process
+        # 3D data that contains many levels, otherwise the regridding
+        # will be deadly slow.
+        # Can be extended to 4D data (contains time) if necessary.
+        ndim = np.ndim(indata)
+        sp = np.shape(indata)
+        if ndim == 3:
+            if sp != (6,self.Nx,self.Nx): 
+                raise ValueError('input data should have the size (6,Nx,Nx)')
+            outdata = np.zeros([self.Nlat,self.Nlon])
+        elif ndim == 4:
+            if (sp[0],sp[2],sp[3]) != (6,self.Nx,self.Nx):
+                raise ValueError('3D input data should have the size (6,Nlev,Nx,Nx)')
+            outdata = np.zeros([sp[1],self.Nlat,self.Nlon])
+        else:
+            raise ValueError('invalid dimension of input data')
 
         # explicitly apply regridding weight
         for n in range(self.n_s): # loop over all pairs
@@ -196,7 +207,13 @@ class C2L(object):
             ix   = self.csind.ix[n] - 1
             iy   = self.csind.iy[n] - 1
             ip   = self.csind.ip[n] - 1
-            outdata[ilat,ilon] += self.S[n]*indata[ip,iy,ix]
+
+            if ndim == 3:
+                # Tons of unnecessary branching, but doesn't seem to affect performance.
+                # Moving this if clause outside of the loop will introduce repeated code.
+                outdata[ilat,ilon] += self.S[n]*indata[ip,iy,ix]
+            elif ndim == 4:
+                outdata[:,ilat,ilon] += self.S[n]*indata[ip,:,iy,ix]
 
         return outdata
 
