@@ -308,3 +308,82 @@ class L2C(object):
         for n in range(self.n_s):
             print(iy_2d[n],self.csind.iy[n],self.csind.ip[n])
         print(np.shape(iy_2d))
+
+
+class L2L(object):
+    '''
+    example:
+    l2l = tempest_remap.L2L('72x46_DEPC-to-288x181_DEPC.nc',72,46,288,181)
+    CSdata = l2c.regrid(LLdata)
+    '''
+    def __init__(self,infile,Nlon_in,Nlat_in,Nlon_out,Nlat_out):
+        '''
+        Open a tempest file and read its regridding weights
+        '''
+        self.Nlon_in = Nlon_in
+        self.Nlat_in = Nlat_in
+        self.Nlon_out = Nlon_out
+        self.Nlat_out = Nlat_out
+
+        # open the tempest offline regridding file
+        print('opening tempest file: '+infile)
+        fh = Dataset(infile, "r", format="NETCDF4")
+
+        # check if dimensions are correctly specified
+        if Nlon_in*Nlat_in != fh.dimensions['n_a'].size:
+            raise ValueError('Nlon_in*Nlat_in is not equal to n_a in the file')
+        if Nlon_out*Nlat_out != fh.dimensions['n_b'].size:
+            raise ValueError('Nlon_out*Nlat_out is not equal to n_b in the file')
+
+        # read data from the file
+        self.n_a = fh.dimensions['n_a'].size # how many boxes in source grid
+        self.n_b = fh.dimensions['n_b'].size # how many boxes in destination grid
+        self.n_s = fh.dimensions['n_s'].size # how many pairs of overlapping-boxes
+
+        self.llind_in = LLind(fh.variables['col'][:], Nlon_in, Nlat_in) # box indices of the source grid
+        self.llind_out = LLind(fh.variables['row'][:], Nlon_out, Nlat_out) # box indices of the destination grid
+        self.S = fh.variables['S'][:] # regridding weight
+        
+        # close netcdf file
+        fh.close()
+      
+        # print basic information
+        print('input grid: '+'lon'+str(Nlon_in)+'_lat'+str(Nlat_in)+
+              ' ; total boxes: '+str(self.n_a))
+        print('input grid: '+'lon'+str(Nlon_out)+'_lat'+str(Nlat_out)+
+              ' ; total boxes: '+str(self.n_b))
+       
+    def regrid(self,indata):
+        '''
+        regrid indata to outdata online
+        '''
+        # check input data dimension
+        ndim = np.ndim(indata)
+        sp = np.shape(indata)
+        if ndim == 2:
+            if sp != (self.Nlat_in,self.Nlon_in): 
+                 raise ValueError('2D input data should have the size (Nlat,Nlon)') 
+            outdata = np.zeros([self.Nlat_out,self.Nlon_out])
+        elif ndim == 3:
+            if (sp[1],sp[2]) != (self.Nlat_in,self.Nlon_in): 
+                raise ValueError('3D input data should have the size (Nlev,Nlat,Nlon)')
+            outdata = np.zeros([sp[0],self.Nlat_out,self.Nlon_out])
+        else:
+            raise ValueError('invalid dimension of input data')
+
+        # array for output data
+
+        # explicitly apply regridding weight
+        for n in range(self.n_s): # loop over all pairs
+            #indices start from 1 but numpy arrays start from 0
+            ilon_in  = self.llind_in.ilon[n] - 1
+            ilat_in  = self.llind_in.ilat[n] - 1
+            ilon_out = self.llind_out.ilon[n] - 1
+            ilat_out = self.llind_out.ilat[n] - 1
+            if ndim == 2:
+                outdata[ilat_out,ilon_out] += self.S[n]*indata[ilat_in,ilon_in]
+            elif ndim == 3:
+                outdata[:,ilat_out,ilon_out] += self.S[n]*indata[:,ilat_in,ilon_in]
+
+        return outdata
+
