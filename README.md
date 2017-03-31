@@ -3,7 +3,9 @@
 A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) with the focus on:
 
 1) Cube-Sphere<->Lat-Lon conservative regridding without external grid description files. (Make use of the Tempest regridding package)
+
 2) Direct visualization of data on the cube-sphere grid.
+
 3) Benchmark suite for comparing GCHP and GEOSChem-classic.
 
 ### Environment setup:
