@@ -12,8 +12,7 @@ A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) with the f
 
 On Odyssey, first time setup:
 
-$ module load python/3.4.1-fasrc01
-
+$ module load python/3.4.1-fasrc01</br>
 $ conda create -n GCHP --clone="$PYTHON_HOME"
 
 $ source activate GCHP
