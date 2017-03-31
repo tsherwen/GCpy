@@ -1,6 +1,6 @@
 # GCHPy
 
-A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) with the focus on:
+A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) model with the focus on:
 
 1. Cube-Sphere<->Lat-Lon conservative regridding without external grid description files. (Make use of the Tempest regridding package)
 
