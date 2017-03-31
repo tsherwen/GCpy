@@ -8,6 +8,8 @@ A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) with the f
 
 3. Benchmark suite for comparing GCHP and GEOSChem-classic.
 
+Originally developed by Jiawei Zhuang 03/25/2017
+
 ### Environment setup:
 
 On Odyssey, first time setup:
@@ -34,6 +36,3 @@ $ module load python/3.4.1-fasrc01
 $ source activate GCHP
 $ export PYTHONPATH=$PYTHONPATH:{your_path_to_GCHPy}
 ```
-
-
-Originally developed by Jiawei Zhuang 03/25/2017
