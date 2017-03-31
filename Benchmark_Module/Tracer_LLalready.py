@@ -391,6 +391,147 @@ class benchmark:
         pdf.close() # close the pdf after saving all figures
         print(pdfname,' finished')
         
+    def plot_fracDiff(self,lev=0,plot_change=False,switch_scale=False,
+                   pdfname='default_fracDiffplot.pdf',full_range=True,
+                   tag='',rows=3):
+        '''
+        Compare self.data1 and self.data2 on a specific level. Loop over all
+        tracers in self.tracerlist. Plot on one multi-page pdf file. 
+        
+        Parameters
+        ----------
+        lev: integer
+            The level to compare
+            
+        pdfname: string, optional but recommended
+            The name the output pdf file
+            
+        tag: string, optional but recommended
+            Will be shown as part of the title. For example,'surface', '500hpa'
+            
+        rows: integer, optional
+            How many rows on a page. Although the page size will be 
+            adjusted accordingly, 3 rows look better.
+            
+        plot_change: logical, optional
+            If set to True, then plot the change with respect to the initial
+            condition (i.e. self.data0), rather than the original field.
+            In this case, self.getdata0 must be executed before.
+        
+        switch_scale: logical, optional
+            By default, the scale of data2 is used for both data1 and data2.
+            This is because model2 is often regarded as the more correct one
+            (the one for reference), so if model1 goes crazy, the color scale 
+            will still make sense.
+            
+            If set to True, then use the scale of data1 instead. This is often
+            combined with plot_change=True to more clearly show the regridding
+            error.
+            
+    
+        Important Returns
+        ----------
+            A pdf file containing the plots of all tracers on that level.
+        
+        '''
+        
+        N = len(self.tracername) # number of tracers
+        Npages = (N-1)//rows+1 # have many pdf pages needed
+        
+        print('create ',pdfname)
+        pdf=PdfPages(self.outputdir+pdfname) # create the pdf to save figures
+        
+        for ipage in range(Npages):
+            
+            fig, axarr = plt.subplots(rows,3,figsize=(12,rows*3))
+        
+            for i in range(rows):
+                i_tracer = ipage*rows + i
+                print('plotting: no.',i_tracer+1,self.tracername[i_tracer])
+                
+                # make variable names shorter for simplicity
+                tracername = self.tracername[i_tracer]
+                
+                # assume v/v, convert to ppbv
+                # might need modification in the future
+                data1 = self.data1[i_tracer][lev,:,:]*1e9
+                data2 = self.data2[i_tracer][lev,:,:]*1e9
+                unit='ppbv'
+                
+                if plot_change:
+                    # plot the change with respect to the initial condition,
+                    # instead to the original field
+                    data0 = self.data0[i_tracer][lev,:,:]*1e9
+                    data1 -= data0
+                    data2 -= data0
+                    cmap=plt.cm.RdBu_r
+                    
+                else:
+                    cmap=ga.WhGrYlRd
+                
+                if np.max(np.abs(data1)) < 1e-1 :
+                    data1 *= 1e3
+                    data2 *= 1e3
+                    unit='pptv'             
+                elif np.max(np.abs(data1)) > 1e3 :
+                    data1 /= 1e3
+                    data2 /= 1e3
+                    unit='ppmv'
+                                  
+                # use the same scale for data1 and data2
+                # use the scale of data2 by default.
+                if switch_scale:
+                    range_data = np.max(np.abs(data1))
+                else:
+                    range_data = np.max(np.abs(data2))
+                # calculate the difference between two data sets
+                data_ratio = (data1-data2)/data2
+                range_ratio=np.max(np.abs(data_ratio))
+                
+                if plot_change:
+                    vmin = -range_data
+                    vmax = range_data
+                    title= tracername+' change; '
+                else:
+                    vmin = 0
+                    vmax = range_data
+                    title= tracername+'; '
+                            
+                ga.tvmap(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
+                         cmap=cmap,title=title+self.model1,ticks = False)
+                ga.tvmap(data2,axis=axarr[i,1],vmin=vmin,vmax=vmax,unit=unit,
+                         cmap=cmap,title=title+self.model2,ticks = False)
+                if full_range:
+                    vmax=range_ratio
+                    vmin=-range_ratio
+                else:
+                    vmax=2.0
+                    vmin=-2.0
+                ga.tvmap(data_ratio,
+                         axis=axarr[i,2],
+                         unit=unit,
+                         title='( '+self.model1+' - '+self.model2+' ) / '+self.model2,
+                         ticks = False,
+                         cmap=plt.cm.RdBu_r,
+                         vmax=vmax,
+                         vmin=vmin)
+                
+                if i_tracer+1 == N : 
+                    i_hide = rows-1
+                    while(i_hide > i):
+                        [a.axis('off') for a in axarr[i_hide, :]]
+                        i_hide -= 1
+                    break # not using the full page
+                
+            fig.suptitle(self.longname+'; '+tag,fontsize=15)
+
+            print('saving one pdf page')
+            pdf.savefig(fig)  # saves the figure into a pdf page
+            plt.close() # close the current figure, prepare for the next page
+            
+        pdf.close() # close the pdf after saving all figures
+        print(pdfname,' finished')
+
     def plot_zonal(self,mean=False,ilon=0,levs=None,
                    plot_change=False,switch_scale=False,
                    pdfname='default_zonalplot.pdf',tag='',rows=3):
@@ -566,7 +707,7 @@ class benchmark:
         
         
     def plot_all(self,plot_surf=True,plot_500hpa=True,plot_zonal=True,
-                 plot_change=False):
+                 plot_fracDiff=True,plot_change=False):
         '''
         Just to wrap several plot_layer and plot_zonal calls for convenience.
         
@@ -593,18 +734,58 @@ class benchmark:
             tag=''
         
         if plot_surf:
-            self.plot_layer(pdfname=self.shortname+tag+'_surf.pdf',lev=0,tag='surface',
-                            switch_scale=switch_scale,plot_change=plot_change)
+            self.plot_layer(pdfname=self.shortname+tag+'_surf_diff.pdf',
+                            lev=0,
+                            tag='surface',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
         if plot_500hpa:
-            self.plot_layer(pdfname=self.shortname+tag+'_500hpa.pdf',lev=22,tag='500hpa',
-                            switch_scale=switch_scale,plot_change=plot_change)
+            self.plot_layer(pdfname=self.shortname+tag+'_500hpa_diff.pdf',
+                            lev=22,
+                            tag='500hpa',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
         if plot_zonal:
-            self.plot_zonal(pdfname=self.shortname+tag+'_180lon.pdf',
-                            ilon=0,levs=[0,20],tag='180lon',
-                            switch_scale=switch_scale,plot_change=plot_change)
-            self.plot_zonal(pdfname=self.shortname+tag+'_zonalmean.pdf',
-                            mean=True,levs=[0,20],tag='zonal mean',
-                            switch_scale=switch_scale,plot_change=plot_change)
+            self.plot_zonal(pdfname=self.shortname+tag+'_trop_180lon.pdf',
+                            ilon=0,
+                            levs=[0,39],
+                            tag='180 lon trop',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
+            self.plot_zonal(pdfname=self.shortname+tag+'_trop_zonalmean.pdf',
+                            mean=True,
+                            levs=[0,39],
+                            tag='zonal mean trop',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
+            self.plot_zonal(pdfname=self.shortname+tag+'_strat_180lon.pdf',
+                            ilon=0,
+                            levs=[40,71],
+                            tag='180 lon strat',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
+            self.plot_zonal(pdfname=self.shortname+tag+'_strat_zonalmean.pdf',
+                            mean=True,
+                            levs=[40,71],
+                            tag='zonal mean strat',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
+
+        if plot_fracDiff:
+            self.plot_fracDiff(pdfname=self.shortname+tag+'_surf_fracDiff.pdf',
+                            lev=0,
+                            tag='surface',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
+            self.plot_fracDiff(pdfname=self.shortname+tag+'_500hPa_fracDiff.pdf',
+                            lev=22,
+                            tag='500hpa',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
+
+
             
 
                 
