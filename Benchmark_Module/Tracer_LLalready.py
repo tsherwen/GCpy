@@ -509,7 +509,7 @@ class benchmark:
                     vmin=-2.0
                 ga.tvmap(data_ratio,
                          axis=axarr[i,2],
-                         unit=unit,
+                         unit='unitless',
                          title='( '+self.model1+' - '+self.model2+' ) / '+self.model2,
                          ticks = False,
                          cmap=plt.cm.RdBu_r,
