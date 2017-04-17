@@ -11,13 +11,16 @@ NOTES:
     
 REVISION HISTORY:
     12 Feb 2017 - J.W.Zhuang - Initial version
-    
+    17 Apr 2017 - E. Lundgren - Updates for v1.0.0 benchmark
+    See git history for history of all further revisions
+
 """
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import ListedColormap
+from matplotlib import ticker
 
 # get gamap's WhGrYlRd color scheme from file
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -141,8 +144,8 @@ def tvmap(data,axis=None,title='',
     
     if show: plt.show()
     
-def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',
-           x=None,y=None,vmax=None,vmin=None,unit='unit',
+def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',ylog=False,
+           x=None,y=None,yrev=False,vmax=None,vmin=None,unit='unit',
            cmap=WhGrYlRd):
     '''
     Plot a general 2D array, very similar to IDL/gamap's tvplot routine.
@@ -179,6 +182,9 @@ def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',
     xlabel,ylabel: string, optional
         labels for x and y dimensions
         
+    ylog: logical, optional
+        enable log scale in y-axis
+
     Important Returns
     ----------
         A general 2D plot without a the map
@@ -219,12 +225,19 @@ def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',
                          linewidth=0,rasterized=True)
     axis.set_xlim( [min(x_b),max(x_b)] )
     axis.set_ylim( [min(y_b),max(y_b)] )
+    if yrev:
+        axis.set_ylim(axis.get_ylim()[::-1])
     axis.set_xlabel(xlabel)
     axis.set_ylabel(ylabel)
+    if ylog:
+        axis.set_yscale('log')
+        # Prevent scientific notation in tick labels
+        axis.yaxis.set_major_formatter(ticker.FormatStrFormatter("%g"))
+
     cb = plt.colorbar(im,ax=axis)
     cb.ax.set_title(unit,fontsize=12,y=1.0,x=2.0) # on the top of the color bar
     axis.set_title(title)
-    
+
     if show: plt.show()
     
     

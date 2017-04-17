@@ -21,8 +21,10 @@ NOTES:
        to gain full control over the plot style and format. 
 
 REVISION HISTORY:
-    12 Feb 2017 - J.W.Zhuang - Initial version
-    
+    12 Feb 2017 - J.W.Zhuang  - Initial version
+    17 Apr 2017 - E. Lundgren - Updates for v1.0.0 benchmark
+    See git history for history of all further revisions
+
 """
 
 import numpy as np
@@ -534,7 +536,8 @@ class benchmark:
 
     def plot_zonal(self,mean=False,ilon=0,levs=None,
                    plot_change=False,switch_scale=False,
-                   pdfname='default_zonalplot.pdf',tag='',rows=3):
+                   pdfname='default_zonalplot.pdf',tag='',ylog=False,
+                   rows=3):
         
         '''
         Compare the zonal profiles of self.data1 and self.data2. Loop over all
@@ -574,6 +577,10 @@ class benchmark:
             If set to True, then use the scale of data1 instead. This is often
             combined with plot_change=True to more clearly show the regridding
             error.
+
+        ylog: logical, optional
+            By default, the y-axis is linear. Passing ylog=True enables
+            log10 scale.
     
         Important Returns
         ----------
@@ -613,14 +620,41 @@ class benchmark:
                 else:
                     cmap=ga.WhGrYlRd
                 
+                # Pressure levels for GC levels 72:1, from GC wiki:
+                # GEOS-Chem_vertical_grids#Vertical grids for GEOS-5, 
+                # GEOS-FP, MERRA.2, and MERRA-2 
+                # NOTE: eventually move this elsewhere! (ewl)
+                levs72_hPa_rev = np.array([   
+                        0.015,    0.026,   0.040,   0.057,   0.078,    
+                        0.105,    0.140,   0.185,   0.245,   0.322, 
+                        0.420,    0.546,   0.706,   0.907,   1.160, 
+                        1.476,    1.868,   2.353,   2.948,   3.677, 
+                        4.562,    5.632,   6.918,   8.456,  10.285, 
+                        12.460,   15.050,  18.124,  21.761,  26.049, 
+                        31.089,   36.993,  43.90,   52.016,  61.496, 
+                        72.558,   85.439, 100.514, 118.250, 139.115, 
+                        163.661,  192.587, 226.745, 267.087, 313.966, 
+                        358.038,  396.112, 434.212, 472.335, 510.475, 
+                        548.628,  586.793, 624.967, 663.146, 694.969, 
+                        720.429,  745.890, 771.354, 796.822, 819.743, 
+                        837.570,  852.852, 868.135, 883.418, 898.701, 
+                        913.984,  929.268, 944.553, 959.837, 975.122, 
+                        990.408, 1005.650 ])
+                levs72_hPa = levs72_hPa_rev[::-1]
+
                 # get limited levels if requested
                 if levs is None:
                     lev = self.lev
+                    press = levs72_hPa
                 else:
                     lev = self.lev[levs[0]:levs[1]]
                     data1_3D=data1_3D[levs[0]:levs[1],:,:]
                     data2_3D=data2_3D[levs[0]:levs[1],:,:]
-                
+                    press = levs72_hPa[levs[0]:levs[1]]
+
+                # Reverse the y-axis in the plot so that P is decreasing up
+                yrev = True
+ 
                 if mean:
                     # get zonal mean
                     data1 = np.mean(data1_3D,axis=2)
@@ -665,16 +699,19 @@ class benchmark:
                     title= tracername+'; '
                          
                 xlabel='lat'
-                ylabel='level'
-                            
-                ga.tvplot(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
-                          cmap=cmap,x=self.lat,y=lev,xlabel=xlabel,ylabel=ylabel,
+                ylabel='hPa'
+                          
+                ga.tvplot(data1, axis=axarr[i,0], vmin=vmin, vmax=vmax,
+                          unit=unit, cmap=cmap, x=self.lat, y=press,
+                          yrev=yrev, xlabel=xlabel, ylabel=ylabel, ylog=ylog,
                           title=title+self.model1)
-                ga.tvplot(data2,axis=axarr[i,1],vmin=vmin,vmax=vmax,unit=unit,
-                          cmap=cmap,x=self.lat,y=lev,xlabel=xlabel,ylabel=ylabel,
+                ga.tvplot(data2, axis=axarr[i,1], vmin=vmin, vmax=vmax,
+                          unit=unit, cmap=cmap, x=self.lat, y=press,
+                          yrev=yrev, xlabel=xlabel, ylabel=ylabel, ylog=ylog,
                           title=title+self.model2)
-                ga.tvplot(data_diff,axis=axarr[i,2],unit=unit,
-                          x=self.lat,y=lev,xlabel=xlabel,ylabel=ylabel,
+                ga.tvplot(data_diff, axis=axarr[i,2], unit=unit,
+                          x=self.lat, y=press, yrev=yrev,
+                          xlabel=xlabel, ylabel=ylabel, ylog=ylog,
                           title=self.model1+' — '+self.model2,
                           cmap=plt.cm.RdBu_r,vmax=range_diff,vmin=-range_diff)
                 
@@ -725,7 +762,7 @@ class benchmark:
         ----------
             Several pdf files.
         '''
-        
+
         if plot_change:
             switch_scale=True # use data1's scale when plotting change
             tag='_change' # the file name should be slightly different
@@ -746,6 +783,18 @@ class benchmark:
                             switch_scale=switch_scale,
                             plot_change=plot_change)
         if plot_zonal:
+            self.plot_zonal(pdfname=self.shortname+tag+'_lowertrop_180lon.pdf',
+                            ilon=0,
+                            levs=[0,21],
+                            tag='180 lon lower trop',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
+            self.plot_zonal(pdfname=self.shortname+tag+'_lowertrop_zonalmean.pdf',
+                            mean=True,
+                            levs=[0,21],
+                            tag='zonal mean lower trop',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change)
             self.plot_zonal(pdfname=self.shortname+tag+'_trop_180lon.pdf',
                             ilon=0,
                             levs=[0,39],
@@ -760,16 +809,18 @@ class benchmark:
                             plot_change=plot_change)
             self.plot_zonal(pdfname=self.shortname+tag+'_strat_180lon.pdf',
                             ilon=0,
-                            levs=[40,71],
+                            levs=[34,71],
                             tag='180 lon strat',
                             switch_scale=switch_scale,
-                            plot_change=plot_change)
+                            plot_change=plot_change,
+                            ylog=True)
             self.plot_zonal(pdfname=self.shortname+tag+'_strat_zonalmean.pdf',
                             mean=True,
-                            levs=[40,71],
+                            levs=[34,71],
                             tag='zonal mean strat',
                             switch_scale=switch_scale,
-                            plot_change=plot_change)
+                            plot_change=plot_change,
+                            ylog=True)
 
         if plot_fracDiff:
             self.plot_fracDiff(pdfname=self.shortname+tag+'_surf_fracDiff.pdf',
