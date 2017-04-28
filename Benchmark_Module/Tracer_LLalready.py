@@ -363,18 +363,19 @@ class benchmark:
                 if plot_change:
                     vmin = -range_data
                     vmax = range_data
-                    title= tracername+' change; '
+                    title= tracername+' change: '
                 else:
                     vmin = 0
                     vmax = range_data
-                    title= tracername+'; '
+                    title= tracername+': '
                             
                 ga.tvmap(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
                          cmap=cmap,title=title+self.model1,ticks = False)
                 ga.tvmap(data2,axis=axarr[i,1],vmin=vmin,vmax=vmax,unit=unit,
                          cmap=cmap,title=title+self.model2,ticks = False)
                 ga.tvmap(data_diff,axis=axarr[i,2],unit=unit,
-                         title=self.model1+' — '+self.model2,ticks = False,
+                         title=title+self.model1+' — '+self.model2,
+                         ticks = False,
                          cmap=plt.cm.RdBu_r,vmax=range_diff,vmin=-range_diff)
                 
                 if i_tracer+1 == N : 
@@ -384,7 +385,7 @@ class benchmark:
                         i_hide -= 1
                     break # not using the full page
                 
-            fig.suptitle(self.longname+'; '+tag,fontsize=15)
+            fig.suptitle(self.longname+': '+tag,fontsize=15)
 
             print('saving one pdf page')
             pdf.savefig(fig)  # saves the figure into a pdf page
@@ -493,11 +494,11 @@ class benchmark:
                 if plot_change:
                     vmin = -range_data
                     vmax = range_data
-                    title= tracername+' change; '
+                    title= tracername+' change: '
                 else:
                     vmin = 0
                     vmax = range_data
-                    title= tracername+'; '
+                    title= tracername+': '
                             
                 ga.tvmap(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
                          cmap=cmap,title=title+self.model1,ticks = False)
@@ -512,7 +513,7 @@ class benchmark:
                 ga.tvmap(data_ratio,
                          axis=axarr[i,2],
                          unit='unitless',
-                         title='( '+self.model1+' - '+self.model2+' ) / '+self.model2,
+                         title=title+'('+self.model1+' - '+self.model2+') / '+self.model2,
                          ticks = False,
                          cmap=plt.cm.RdBu_r,
                          vmax=vmax,
@@ -525,7 +526,7 @@ class benchmark:
                         i_hide -= 1
                     break # not using the full page
                 
-            fig.suptitle(self.longname+'; '+tag,fontsize=15)
+            fig.suptitle(self.longname+': '+tag,fontsize=15)
 
             print('saving one pdf page')
             pdf.savefig(fig)  # saves the figure into a pdf page
@@ -692,11 +693,11 @@ class benchmark:
                 if plot_change:
                     vmin = -range_data
                     vmax = range_data
-                    title= tracername+' change; '
+                    title= tracername+' change: '
                 else:
                     vmin = 0
                     vmax = range_data
-                    title= tracername+'; '
+                    title= tracername+': '
                          
                 xlabel='lat'
                 ylabel='hPa'
@@ -712,7 +713,7 @@ class benchmark:
                 ga.tvplot(data_diff, axis=axarr[i,2], unit=unit,
                           x=self.lat, y=press, yrev=yrev,
                           xlabel=xlabel, ylabel=ylabel, ylog=ylog,
-                          title=self.model1+' — '+self.model2,
+                          title=title+self.model1+' — '+self.model2,
                           cmap=plt.cm.RdBu_r,vmax=range_diff,vmin=-range_diff)
                 
                 # hide x ticks except the bottom plots
@@ -733,7 +734,7 @@ class benchmark:
             plt.setp([a.set_ylabel('') for a in list(chain.from_iterable(axarr[:, 1:3]))],
                      visible=False)
                 
-            fig.suptitle(self.longname+'; '+tag,fontsize=15)
+            fig.suptitle(self.longname+': '+tag,fontsize=15)
 
             print('saving one pdf page')
             pdf.savefig(fig)  # saves the figure into a pdf page
@@ -779,7 +780,7 @@ class benchmark:
         if plot_500hpa:
             self.plot_layer(pdfname=self.shortname+tag+'_500hpa_diff.pdf',
                             lev=22,
-                            tag='500hpa',
+                            tag='500 hpa',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
         if plot_zonal:
@@ -831,7 +832,7 @@ class benchmark:
                             plot_change=plot_change)
             self.plot_fracDiff(pdfname=self.shortname+tag+'_500hPa_fracDiff.pdf',
                             lev=22,
-                            tag='500hpa',
+                            tag='500 hpa',
                             switch_scale=switch_scale,
                             full_range=False,
                             plot_change=plot_change)
