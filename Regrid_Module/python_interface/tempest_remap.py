@@ -319,21 +319,49 @@ class L2C(object):
 
     def tilefile(self,filename):
         '''
-        Create a GMAO tilefile (TBD)
-        A tilefile needs:
-        self.llind.ilon
-        self.llind.ilat
-        self.csind.ix
-        self.csind.iy_2D ( = iy+Nx*(ip-1)  )
-        self.S
-        All of them are already known once the object is initialized
-        The only thing left is binary file I/O
-        '''
-        iy_2d = self.csind.iy + self.Nx*(self.csind.ip-1)
-        for n in range(self.n_s):
-            print(iy_2d[n],self.csind.iy[n],self.csind.ip[n])
-        print(np.shape(iy_2d))
+        Create a GMAO-style tilefile
 
+        Define blocks of data to write, each consisting of data
+        memory (bytes), data, and byte format string. Pack each
+        block into a python bytes object for writing. Number
+        of bytes is written twice for read error checking.
+
+        NOTES:
+           1. Byte format str mapping is : i=int32, p=char, f=float32         
+           2. dummy variables are not used but are needed to meet
+              format requirements
+        '''
+        dmem = self.n_s*4                   # num bytes per map array
+        # pad grid names to be 128 bytes
+        llname = self.llind.name.ljust(128,' ')
+        csname = self.csind.name.ljust(128,' ')
+        # Get the 2D indexes
+        jj_ii_2d = self.csind.get_2D_ind()
+        data_blocks = [
+            ( 4,    self.n_s,          'i' ), # num overlapping boxes
+            ( 4,    2,                 'i' ), # num grids
+            ( 128,  llname,            'p' ), # 128-byte lat/lon grid name 
+            ( 4,    self.llind.Nlon,   'i' ), # lat/lon num lons
+            ( 4,    self.llind.Nlat,   'i' ), # lat/lon num lats
+            ( 128,  csname,            'p' ), # 128-byte cs grid name
+            ( 4,    self.csind.NX,     'i' ), # cs face side length
+            ( 4,    self.csind.NX*6,   'i' ), # face side length * 6
+            ( dmem, [-1]*self.n_s,     'f' ), # dummy type variable
+            ( dmem, [-1]*self.n_s,     'f' ), # dummy x variable
+            ( dmem, [-1]*self.n_s,     'f' ), # dummy y variable
+            ( dmem, self.llind.ilon+1, 'f' ), # 1-based lon mapping indexes
+            ( dmem, self.llind.ilat+1, 'f' ), # 1-based lat mapping indexes
+            ( dmem, self.S,            'f' ), # regridding weights
+            ( dmem, self.csind.ii+1,   'f' ), # 1-based cs equivalent of ilon
+            ( dmem, self.csind.jj+1,   'f' ), # 1-based cs equivalent of ilat
+            ( dmem, self.S,            'f' )  # regridding weights (maybe change to bad vals since not used)
+        ]
+        with open( filename, 'wb') as f: 
+            for dbytes, dname, dtype in data_blocks:
+                s = struct.Struct('i {} i'.format(dtype))
+                if dtype == 'p':
+                    dname = str.encode(dname)
+                f.write(s.pack(dbytes, dname, dbytes)) 
 
 class L2L(object):
     '''
