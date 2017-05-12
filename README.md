@@ -1,18 +1,19 @@
 # GCPy
 
-A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) model with the focus on:
+A comprehensive python tool for the GEOS-Chem model with the focus on:
 
-1. Cube-Sphere<->Lat-Lon conservative regridding without external grid description files. (Make use of the Tempest regridding package)
+1. Benchmark suite for both GEOS-Chem classic and GCHP.
 
-2. Direct visualization of data on the cube-sphere grid.
+2. Visualization tools for data on either the lat/lon or cube-sphere grids.
 
-3. Benchmark suite for comparing GCHP and GEOSChem-classic.
+3. Regridding tools for both lat/lon and cubed-sphere grids.
+
 
 Originally developed by Jiawei Zhuang 03/25/2017
 
 ### Environment setup:
 
-On Odyssey, first time setup:
+Example of first time setup on the Harvard Odyssey cluster. NOTE: can be adapted to your home system.
 
 
 ```
@@ -26,7 +27,7 @@ $ condal install netcdf4
 $ export PYTHONPATH=$PYTHONPATH:{your_path_to_GCHPy}
 ```
 
-On Odyssey, subsequent sessions:
+On subsequent sessions:
 
 
 ```
