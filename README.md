@@ -1,4 +1,4 @@
-# GCHPy
+# GCPy
 
 A comprehensive python tool for the GEOS-Chem High-Performance (GCHP) model with the focus on:
 
