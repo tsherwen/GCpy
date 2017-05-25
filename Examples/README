@@ -1,0 +1,17 @@
+GCPy Examples
+
+The Examples directory contains scripts that illustrate ways to use GCPy. 
+This directory currently includes a random mix of scripts developed by GCPy 
+users for personal use. These scripts may be adapted for your own use or may be 
+helpful in learning python. Be aware that there is currently no adopted 
+python style guide used in these examples and assumed programming proficiency 
+level will vary. 
+
+GCPy is still in the beginning phases of planning and development. As GCPy
+evolves, we will put in place a more structured set of tutorials and examples.
+If you would like to share your code, or would like to contribute to the
+development of GCPy, please contact the GEOS-Chem Support Team.
+
+~ GCST, May 2017
+
+  
