@@ -23,7 +23,7 @@ $ module load python/3.4.1-fasrc01
 $ conda create -n GCHP --clone="$PYTHON_HOME"
 $ source activate GCHP
 $ conda install Basemap
-$ condal install netcdf4
+$ conda install netcdf4
 $ export PYTHONPATH=$PYTHONPATH:{your_path_to_GCHPy}
 ```
 
