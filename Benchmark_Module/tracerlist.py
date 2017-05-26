@@ -147,6 +147,8 @@ tracerlist_125 = [
         'ASOAN',
         'ASOA1',
         'ASOA2',
-        'ASOA3'
+        'ASOA3',
+        'EOH',
+        'MGLY'
         ]
                    
