@@ -35,5 +35,5 @@ On subsequent sessions:
 
 $ module load python/3.4.1-fasrc01
 $ source activate GCHP
-$ export PYTHONPATH=$PYTHONPATH:{your_path_to_GCHPy}
+$ export PYTHONPATH=$PYTHONPATH:/your/path/to/GCHPy
 ```
