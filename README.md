@@ -20,7 +20,7 @@ Example of first time setup on the Harvard Odyssey cluster. NOTE: can be adapted
 #!unix
 
 $ module load python/3.4.1-fasrc01
-$ conda create -n GCHP --clone="$PYTHON_HOME"
+$ conda create -n GCHP --clone="$PYTHON_HOME" (using name GCHP is just an example; you can name your virtual env whatever you like)
 $ source activate GCHP
 $ conda install Basemap
 $ conda install netcdf4
