@@ -46,10 +46,10 @@ def regrid_gcc(infile):
 def compare_output(outdir,testname,file1,file2,tracerlist):
     bm = TLL.benchmark(outputdir=outdir+'/',shortname=testname)
     if os.path.basename(file1).startswith('GCHP'):
-        bm.getdata1(file1,tag='GCHP',flip=False,tracerlist=tracerlist_127)
+        bm.getdata1(file1,tag='GCHP',flip=False,tracerlist=tracerlist)
         print('file1 is GCHP')
     else:
-        bm.getdata1(file1,tag='GCC',tracerlist=tracerlist_127)
+        bm.getdata1(file1,tag='GCC',tracerlist=tracerlist)
         print('file1 is GCC')
     if os.path.basename(file2).startswith('GCHP'):
         bm.getdata2(file2,tag='GCHP',flip=False)
@@ -58,11 +58,24 @@ def compare_output(outdir,testname,file1,file2,tracerlist):
         bm.getdata2(file2,tag='GCC')
         print('file2 is GCC')
     print('Creating comparison plots for',testname)
-    bm.plot_all(plot_change=False,
-                plot_surf=True,
+    bm.plot_all(plot_surf=True,
                 plot_500hpa=True,
-                plot_zonal=True,
-                plot_fracDiff=True)
+                plot_surf_fracdiff=True,
+                plot_500hpa_fracdiff=True,
+                plot_zonal_lowertrop_180lon_diff=False,
+                plot_zonal_lowertrop_180lon_fracdiff=False,
+                plot_zonal_lowertrop_mean_diff=False,
+                plot_zonal_lowertrop_mean_fracdiff=False,
+                plot_zonal_trop_180lon_diff=True,
+                plot_zonal_trop_180lon_fracdiff=True,
+                plot_zonal_trop_mean_diff=True,
+                plot_zonal_trop_mean_fracdiff=True,
+                plot_zonal_strat_180lon_diff=True,
+                plot_zonal_strat_180lon_fracdiff=True,
+                plot_zonal_strat_mean_diff=True,
+                plot_zonal_strat_mean_fracdiff=True,
+                plot_change=False)
+
 
 if __name__ == "__main__":
     gchpfile = os.path.join(work_dir,dname_gchp,'OutputDir',fname_gchp)
@@ -78,4 +91,5 @@ if __name__ == "__main__":
         os.makedirs(plots_dir)
 
     # Generate plots (function defined above)
-    compare_output(plots_dir,run_name,gchp_regridded,gcc_regridded,tracerlist=None)
+    tracerlist=tracerlist_127
+    compare_output(plots_dir,run_name,gchp_regridded,gcc_regridded,tracerlist=tracerlist)
