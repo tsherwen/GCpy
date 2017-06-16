@@ -138,10 +138,15 @@ def tvmap(data,axis=None,title='',
     # especially for pdf and postscript formats
     im = m.pcolormesh(lons,lats,data,cmap=cmap,vmax=vmax,vmin=vmin,
                       linewidth=0,rasterized=True)
-    cb = m.colorbar(im)
+    if vmax > 0.01 and vmax < 1000:
+        cb = m.colorbar(im)
+        cb.ax.tick_params(labelsize=8)
+    else:
+        cb = m.colorbar(im,format='%.1e')
+        cb.ax.tick_params(labelsize=8)
+    cb.ax.xaxis.set_label_position('bottom')
     cb.ax.set_title(unit,fontsize=12,y=1.0,x=2.0) # on the top of the color bar
     plt.title(title)
-    
     if show: plt.show()
     
 def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',ylog=False,
@@ -234,7 +239,13 @@ def tvplot(data,axis=None,title='',xlabel='x',ylabel='y',ylog=False,
         # Prevent scientific notation in tick labels
         axis.yaxis.set_major_formatter(ticker.FormatStrFormatter("%g"))
 
-    cb = plt.colorbar(im,ax=axis)
+    if vmax > 0.01 and vmax < 1000:
+        cb = plt.colorbar(im,ax=axis)
+        cb.ax.tick_params(labelsize=8)
+    else:
+        cb = plt.colorbar(im,ax=axis,format='%.1e')
+        cb.ax.tick_params(labelsize=8)
+    cb.ax.xaxis.set_label_position('bottom')
     cb.ax.set_title(unit,fontsize=12,y=1.0,x=2.0) # on the top of the color bar
     axis.set_title(title)
 

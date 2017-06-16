@@ -265,7 +265,8 @@ class benchmark:
         fh.close() 
       
     def plot_layer(self,lev=0,plot_change=False,switch_scale=False,
-                   pdfname='default_layerplot.pdf',tag='',rows=3):
+                   pdfname='default_layerplot.pdf',tag='',
+                   rows=3):
         '''
         Compare self.data1 and self.data2 on a specific level. Loop over all
         tracers in self.tracerlist. Plot on one multi-page pdf file. 
@@ -368,7 +369,22 @@ class benchmark:
                     vmin = 0
                     vmax = range_data
                     title= tracername+': '
-                            
+
+                # overwrite much of above
+                data1_min = np.min(np.abs(data1))
+                data1_max = np.max(np.abs(data1))
+                data2_min = np.min(np.abs(data2))
+                data2_max = np.max(np.abs(data2))
+                data_min =  np.min([data1_min,data2_min])
+                data_max =  np.max([data1_max,data2_max]) 
+
+                # always use max of both datasets instead
+                vmax = data_max
+
+                # use 0 for min unless dataset range is small 
+                if (data_max-data_min)/data_max < 0.2:
+                    vmin = data_min
+
                 ga.tvmap(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
                          cmap=cmap,title=title+self.model1,ticks = False)
                 ga.tvmap(data2,axis=axarr[i,1],vmin=vmin,vmax=vmax,unit=unit,
@@ -395,7 +411,7 @@ class benchmark:
         print(pdfname,' finished')
         
     def plot_fracDiff(self,lev=0,plot_change=False,switch_scale=False,
-                   pdfname='default_fracDiffplot.pdf',full_range=True,
+                   pdfname='default_fracDiffplot.pdf',full_range=False,
                    tag='',rows=3):
         '''
         Compare self.data1 and self.data2 on a specific level. Loop over all
@@ -487,7 +503,7 @@ class benchmark:
                     range_data = np.max(np.abs(data1))
                 else:
                     range_data = np.max(np.abs(data2))
-                # calculate the difference between two data sets
+                # calculate the frac difference between two data sets
                 data_ratio = (data1-data2)/data2
                 range_ratio=np.max(np.abs(data_ratio))
                 
@@ -499,7 +515,22 @@ class benchmark:
                     vmin = 0
                     vmax = range_data
                     title= tracername+': '
-                            
+
+                # overwrite much of above
+                data1_min = np.min(np.abs(data1))
+                data1_max = np.max(np.abs(data1))
+                data2_min = np.min(np.abs(data2))
+                data2_max = np.max(np.abs(data2))
+                data_min =  np.min([data1_min,data2_min])
+                data_max =  np.max([data1_max,data2_max]) 
+
+                # always use max of both datasets instead
+                vmax = data_max
+
+                # use 0 for min unless dataset range is small 
+                if (data_max-data_min)/data_max < 0.2:
+                    vmin = data_min
+
                 ga.tvmap(data1,axis=axarr[i,0],vmin=vmin,vmax=vmax,unit=unit,
                          cmap=cmap,title=title+self.model1,ticks = False)
                 ga.tvmap(data2,axis=axarr[i,1],vmin=vmin,vmax=vmax,unit=unit,
@@ -699,6 +730,21 @@ class benchmark:
                     vmax = range_data
                     title= tracername+': '
                          
+                # overwrite much of above
+                data1_min = np.min(np.abs(data1))
+                data1_max = np.max(np.abs(data1))
+                data2_min = np.min(np.abs(data2))
+                data2_max = np.max(np.abs(data2))
+                data_min =  np.min([data1_min,data2_min])
+                data_max =  np.max([data1_max,data2_max]) 
+
+                # always use max of both datasets instead
+                vmax = data_max
+
+                # use 0 for min unless dataset range is small 
+                if (data_max-data_min)/data_max < 0.2:
+                    vmin = data_min
+
                 xlabel='lat'
                 ylabel='hPa'
                           
@@ -742,10 +788,259 @@ class benchmark:
             
         pdf.close() # close the pdf after saving all figures
         print(pdfname,' finished')
+
+    def plot_zonal_fracDiff(self,mean=False,ilon=0,levs=None,
+                   plot_change=False,switch_scale=False,
+                   pdfname='default_zonalplot.pdf',tag='',ylog=False,
+                   full_range=False,rows=3):
+        
+        '''
+        Compare the zonal profiles of self.data1 and self.data2. Loop over all
+        tracers in self.tracerlist. Plot on one multi-page pdf file. 
+        
+        Parameters
+        ----------
+        mean: logical, optional
+            If set to True, then plot the zonal mean.
+            Otherwise plot one cross-section specified by ilon
+            
+        ilon: integer, optional
+            The longitude index of the cross-section. 
+            Will have not effect mean is True.
+            
+        pdfname: string, optional but recommended
+            The name the output pdf file
+            
+        tag: string, optional but recommended
+            Will be shown as part of the title. For example,'zonal mean'
+            
+        rows: integer, optional
+            How many rows on a page. Although the page size will be 
+            adjusted accordingly, 3 rows look better.
+            
+        plot_change: logical, optional
+            If set to True, then plot the change with respect to the initial
+            condition (i.e. self.data0), rather than the original field.
+            In this case, self.getdata0 must be executed before.
+        
+        switch_scale: logical, optional
+            By default, the scale of data2 is used for both data1 and data2.
+            This is because model2 is often regarded as the more correct one
+            (the one for reference), so if model1 goes crazy, the color scale 
+            will still make sense.
+            
+            If set to True, then use the scale of data1 instead. This is often
+            combined with plot_change=True to more clearly show the regridding
+            error.
+
+        ylog: logical, optional
+            By default, the y-axis is linear. Passing ylog=True enables
+            log10 scale.
+    
+        Important Returns
+        ----------
+            A pdf file containing the plots of all tracers' zonal profile.
+        
+        '''
+                
+        N = len(self.tracername) # number of tracers
+        
+        Npages = (N-1)//rows+1 # have many pdf pages needed
+        
+        print('create ',pdfname)
+        pdf=PdfPages(self.outputdir+pdfname) # create the pdf to save figures
+        
+        for ipage in range(Npages):
+            
+            fig, axarr = plt.subplots(rows,3,figsize=(12,rows*3))
+        
+            for i in range(rows):
+                i_tracer = ipage*rows + i
+                print('plotting: no.',i_tracer+1,self.tracername[i_tracer])
+                
+                # make variable names shorter for simplicity.
+                # '*1.0' is needed, otherwise data1_3D amd self.data1 will 
+                # share the same physical address, and will affect next plots.
+                tracername = self.tracername[i_tracer]
+                data1_3D = self.data1[i_tracer][:]*1.0
+                data2_3D = self.data2[i_tracer][:]*1.0
+                                     
+                if plot_change:
+                    # plot the change with respect to the initial condition,
+                    # instead to the original field
+                    data0_3D = self.data0[i_tracer][:]*1.0
+                    data1_3D -= data0_3D
+                    data2_3D -= data0_3D
+                    cmap=plt.cm.RdBu_r
+                else:
+                    cmap=ga.WhGrYlRd
+                
+                # Pressure levels for GC levels 72:1, from GC wiki:
+                # GEOS-Chem_vertical_grids#Vertical grids for GEOS-5, 
+                # GEOS-FP, MERRA.2, and MERRA-2 
+                # NOTE: eventually move this elsewhere! (ewl)
+                levs72_hPa_rev = np.array([   
+                        0.015,    0.026,   0.040,   0.057,   0.078,    
+                        0.105,    0.140,   0.185,   0.245,   0.322, 
+                        0.420,    0.546,   0.706,   0.907,   1.160, 
+                        1.476,    1.868,   2.353,   2.948,   3.677, 
+                        4.562,    5.632,   6.918,   8.456,  10.285, 
+                        12.460,   15.050,  18.124,  21.761,  26.049, 
+                        31.089,   36.993,  43.90,   52.016,  61.496, 
+                        72.558,   85.439, 100.514, 118.250, 139.115, 
+                        163.661,  192.587, 226.745, 267.087, 313.966, 
+                        358.038,  396.112, 434.212, 472.335, 510.475, 
+                        548.628,  586.793, 624.967, 663.146, 694.969, 
+                        720.429,  745.890, 771.354, 796.822, 819.743, 
+                        837.570,  852.852, 868.135, 883.418, 898.701, 
+                        913.984,  929.268, 944.553, 959.837, 975.122, 
+                        990.408, 1005.650 ])
+                levs72_hPa = levs72_hPa_rev[::-1]
+
+                # get limited levels if requested
+                if levs is None:
+                    lev = self.lev
+                    press = levs72_hPa
+                else:
+                    lev = self.lev[levs[0]:levs[1]]
+                    data1_3D=data1_3D[levs[0]:levs[1],:,:]
+                    data2_3D=data2_3D[levs[0]:levs[1],:,:]
+                    press = levs72_hPa[levs[0]:levs[1]]
+
+                # Reverse the y-axis in the plot so that P is decreasing up
+                yrev = True
+ 
+                if mean:
+                    # get zonal mean
+                    data1 = np.mean(data1_3D,axis=2)
+                    data2 = np.mean(data2_3D,axis=2)
+                else:
+                    # get cross-section
+                    data1 = data1_3D[:,:,ilon]
+                    data2 = data2_3D[:,:,ilon]
+                    
+                # assume v/v, convert to ppbv
+                # might need modification in the future
+                data1 *= 1e9
+                data2 *= 1e9
+                unit='ppbv'
+
+                if np.max(data1) < 1e-1 :
+                    data1 *= 1e3
+                    data2 *= 1e3
+                    unit='pptv'                    
+                elif np.max(data1) > 1e3 :
+                    data1 /= 1e3
+                    data2 /= 1e3
+                    unit='ppmv'
+                    
+                # use the same scale for data1 and data2
+                # use the scale of data2 by default.
+                if switch_scale:
+                    range_data = np.max(np.abs(data1))
+                else:
+                    range_data = np.max(np.abs(data2))
+                
+                # calculate the frac difference between two data sets
+                data_ratio = (data1-data2)/data2
+                range_ratio=np.max(np.abs(data_ratio))
+                ## calculate the difference between two data sets
+                #data_diff = data1-data2
+                #range_diff=np.max(np.abs(data_diff))
+                
+                if plot_change:
+                    vmin = -range_data
+                    vmax = range_data
+                    title= tracername+' change: '
+                else:
+                    vmin = 0
+                    vmax = range_data
+                    title= tracername+': '
+                         
+                # overwrite much of above
+                data1_min = np.min(np.abs(data1))
+                data1_max = np.max(np.abs(data1))
+                data2_min = np.min(np.abs(data2))
+                data2_max = np.max(np.abs(data2))
+                data_min =  np.min([data1_min,data2_min])
+                data_max =  np.max([data1_max,data2_max]) 
+
+                # always use max of both datasets instead
+                vmax = data_max
+
+                # use 0 for min unless dataset range is small 
+                if (data_max-data_min)/data_max < 0.2:
+                    vmin = data_min
+
+                xlabel='lat'
+                ylabel='hPa'
+                          
+                ga.tvplot(data1, axis=axarr[i,0], vmin=vmin, vmax=vmax,
+                          unit=unit, cmap=cmap, x=self.lat, y=press,
+                          yrev=yrev, xlabel=xlabel, ylabel=ylabel, ylog=ylog,
+                          title=title+self.model1)
+                ga.tvplot(data2, axis=axarr[i,1], vmin=vmin, vmax=vmax,
+                          unit=unit, cmap=cmap, x=self.lat, y=press,
+                          yrev=yrev, xlabel=xlabel, ylabel=ylabel, ylog=ylog,
+                          title=title+self.model2)
+                if full_range:
+                    vmax=range_ratio
+                    vmin=-range_ratio
+                else:
+                    vmax=2.0
+                    vmin=-2.0
+                ga.tvplot(data_ratio, axis=axarr[i,2], unit=unit,
+                          x=self.lat, y=press, yrev=yrev,
+                          xlabel=xlabel, ylabel=ylabel, ylog=ylog,
+                          title=title+self.model1+' — '+self.model2,
+                          cmap=plt.cm.RdBu_r,vmax=vmax,vmin=vmin)
+                
+                # hide x ticks except the bottom plots
+                if (i != rows-1 ) and ( i_tracer+1 != N) :
+                    plt.setp([a.get_xticklabels() for a in axarr[i, :]], 
+                             visible=False)
+                    plt.setp([a.set_xlabel('') for a in axarr[i, :]], 
+                             visible=False)
+                
+                if i_tracer+1 == N : 
+                    if i != rows-1 :
+                        [a.axis('off') for a in axarr[i+1, :]]
+                    break # not using the full page
+                
+            #  hide y ticks for right plots
+            plt.setp([a.get_yticklabels() for a in list(chain.from_iterable(axarr[:, 1:3]))], 
+                     visible=False)
+            plt.setp([a.set_ylabel('') for a in list(chain.from_iterable(axarr[:, 1:3]))],
+                     visible=False)
+                
+            fig.suptitle(self.longname+': '+tag,fontsize=15)
+
+            print('saving one pdf page')
+            pdf.savefig(fig)  # saves the figure into a pdf page
+            plt.close() # close the current figure, prepare for the next page
+            
+        pdf.close() # close the pdf after saving all figures
+        print(pdfname,' finished')
         
         
-    def plot_all(self,plot_surf=True,plot_500hpa=True,plot_zonal=True,
-                 plot_fracDiff=True,plot_change=False):
+    def plot_all(self,
+                 plot_surf=True,
+                 plot_surf_fracdiff=True,
+                 plot_500hpa=True,
+                 plot_500hpa_fracdiff=True,
+                 plot_zonal_lowertrop_180lon_diff=True,
+                 plot_zonal_lowertrop_180lon_fracdiff=True,
+                 plot_zonal_lowertrop_mean_diff=True,
+                 plot_zonal_lowertrop_mean_fracdiff=True,
+                 plot_zonal_trop_180lon_diff=True,
+                 plot_zonal_trop_180lon_fracdiff=True,
+                 plot_zonal_trop_mean_diff=True,
+                 plot_zonal_trop_mean_fracdiff=True,
+                 plot_zonal_strat_180lon_diff=True,
+                 plot_zonal_strat_180lon_fracdiff=True,
+                 plot_zonal_strat_mean_diff=True,
+                 plot_zonal_strat_mean_fracdiff=True,
+                 plot_change=False):
         '''
         Just to wrap several plot_layer and plot_zonal calls for convenience.
         
@@ -772,70 +1067,125 @@ class benchmark:
             tag=''
         
         if plot_surf:
-            self.plot_layer(pdfname=self.shortname+tag+'_surf_diff.pdf',
+            self.plot_layer(pdfname=self.shortname+tag
+                            +'_surf_diff.pdf',
                             lev=0,
                             tag='surface',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
+        if plot_surf_fracdiff:
+            self.plot_fracDiff(pdfname=self.shortname+tag
+                               +'_surf_fracDiff.pdf',
+                            lev=0,
+                            tag='surface',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
         if plot_500hpa:
-            self.plot_layer(pdfname=self.shortname+tag+'_500hpa_diff.pdf',
+            self.plot_layer(pdfname=self.shortname+tag
+                            +'_500hpa_diff.pdf',
                             lev=22,
                             tag='500 hpa',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
-        if plot_zonal:
-            self.plot_zonal(pdfname=self.shortname+tag+'_lowertrop_180lon.pdf',
+        if plot_500hpa_fracdiff:
+            self.plot_fracDiff(pdfname=self.shortname+tag
+                               +'_500hPa_fracDiff.pdf',
+                            lev=22,
+                            tag='500 hpa',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
+
+        if plot_zonal_lowertrop_180lon_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_lowertrop_180lon.pdf',
                             ilon=0,
                             levs=[0,21],
                             tag='180 lon lower trop',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
-            self.plot_zonal(pdfname=self.shortname+tag+'_lowertrop_zonalmean.pdf',
+        if plot_zonal_lowertrop_mean_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_lowertrop_zonalmean.pdf',
                             mean=True,
                             levs=[0,21],
                             tag='zonal mean lower trop',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
-            self.plot_zonal(pdfname=self.shortname+tag+'_trop_180lon.pdf',
+        if plot_zonal_trop_180lon_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_trop_180lon.pdf',
                             ilon=0,
                             levs=[0,39],
                             tag='180 lon trop',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
-            self.plot_zonal(pdfname=self.shortname+tag+'_trop_zonalmean.pdf',
+        if plot_zonal_trop_mean_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_trop_zonalmean.pdf',
                             mean=True,
                             levs=[0,39],
                             tag='zonal mean trop',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
-            self.plot_zonal(pdfname=self.shortname+tag+'_strat_180lon.pdf',
+        if plot_zonal_strat_180lon_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_strat_180lon.pdf',
                             ilon=0,
                             levs=[34,71],
                             tag='180 lon strat',
                             switch_scale=switch_scale,
                             plot_change=plot_change,
                             ylog=True)
-            self.plot_zonal(pdfname=self.shortname+tag+'_strat_zonalmean.pdf',
+        if plot_zonal_strat_mean_diff:
+            self.plot_zonal(pdfname=self.shortname+tag
+                            +'_strat_zonalmean.pdf',
                             mean=True,
                             levs=[34,71],
                             tag='zonal mean strat',
                             switch_scale=switch_scale,
                             plot_change=plot_change,
                             ylog=True)
+        if plot_zonal_trop_180lon_fracdiff:
+            self.plot_zonal_fracDiff(pdfname=self.shortname+tag
+                                     +'_trop_180lon_fracDiff.pdf',
+                            ilon=0,
+                            levs=[0,39],
+                            tag='180 lon trop',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
+        if plot_zonal_trop_mean_fracdiff:
+            self.plot_zonal_fracDiff(pdfname=self.shortname+tag
+                                     +'_trop_zonalmean_fracDiff.pdf',
+                            mean=True,
+                            levs=[0,39],
+                            tag='zonal mean trop',
+                            switch_scale=switch_scale,
+                            full_range=False,
+                            plot_change=plot_change)
+        if plot_zonal_strat_180lon_fracdiff:
+            self.plot_zonal_fracDiff(pdfname=self.shortname+tag
+                                     +'_strat_180lon_fracDiff.pdf',
+                            ilon=0,
+                            levs=[34,71],
+                            tag='180 lon strat',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change,
+                            full_range=False,
+                                     ylog=True)
+        if plot_zonal_strat_mean_fracdiff:
+            self.plot_zonal_fracDiff(pdfname=self.shortname+tag
+                                     +'_strat_zonalmean_fracDiff.pdf',
+                            mean=True,
+                            levs=[34,71],
+                            tag='zonal mean strat',
+                            switch_scale=switch_scale,
+                            plot_change=plot_change,
+                            full_range=False,
+                            ylog=True)
 
-        if plot_fracDiff:
-            self.plot_fracDiff(pdfname=self.shortname+tag+'_surf_fracDiff.pdf',
-                            lev=0,
-                            tag='surface',
-                            switch_scale=switch_scale,
-                            full_range=False,
-                            plot_change=plot_change)
-            self.plot_fracDiff(pdfname=self.shortname+tag+'_500hPa_fracDiff.pdf',
-                            lev=22,
-                            tag='500 hpa',
-                            switch_scale=switch_scale,
-                            full_range=False,
-                            plot_change=plot_change)
 
 
             
