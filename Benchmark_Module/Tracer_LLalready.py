@@ -66,7 +66,7 @@ class benchmark:
         '''
         self.outputdir=outputdir
         self.shortname=shortname
-        if longname is None:
+        if isinstance(longname, type(None)):
             self.longname=shortname
         else:
             self.longname=longname
@@ -74,7 +74,7 @@ class benchmark:
         self.isData1=False # haven't read data1
         
     def getdata1(self,filename,tracerlist=None,tag='model1',
-                 prefix='SPC_',time=0,flip=False):
+                 prefix='IJ_AVG_S__',time=0,flip=False,avg_time=False):
         '''
         Get data from the 1st model.
         
@@ -113,21 +113,32 @@ class benchmark:
         
         # open the netcdf file with read-only mode
         fh = Dataset(filename, "r", format="NETCDF4")
-        
+
+        # Temporally set override coridinate variable names
+#        nc_lon_var = 'lon'
+#        nc_lat_var = 'lat'
+#        nc_lev_var = 'lev'
+        nc_lon_var = 'longitude'
+        nc_lat_var = 'latitude'
+        nc_lev_var = 'model_level_number'#'dim3'
+        print( [ i for i in fh.variables ] )
         # get dimension info
         # use len() instead of .size for compatibility with python2
-        self.lon=fh['lon'][:]
-        self.lat=fh['lat'][:]
-        self.lev=fh['lev'][:]
+        self.lon=fh[nc_lon_var][:]
+        self.lat=fh[nc_lat_var][:]
+        self.lev=fh[nc_lev_var][:]
         self.Nlon=len(self.lon)
         self.Nlat=len(self.lat)
         self.Nlev=len(self.lev)
         
         # initialize an empty list to hold the data.
         self.data1=[]
+
+        # initialize an empty dictionary to hold the units
+        self.data1_tracer_units={}     
         
         # use 'is' instead of '==' to test None
-        if (tracerlist is None):
+        if isinstance(tracerlist, type(None)):
             # tracerlist not specified. go through all entries
             
             # initialize an empty list to hold the name
@@ -145,12 +156,16 @@ class benchmark:
                 if prefix in k:
                     # get the name without prefix
                     self.tracername.append(k.replace(prefix,''))
-                    # get one time slice
-                    data=v[time,:,:,:]
-
+                    # average time of get one time slice?
+                    if avg_time:
+                        data=v[:].mean(axis=0)
+                    else:
+                        data=v[time,:,:,:]
+                    # flip lev dimension of data?
                     if flip: data=data[::-1,:,:]
                     self.data1.append(data)
-            
+                    # save the units of the data 
+                    self.data1_tracer_units[varname] = fh[varname].ctm_units            
         else:
             # tracerlist specified. 
             self.tracername=tracerlist
@@ -159,10 +174,17 @@ class benchmark:
                 # expand, for example, 'O3' to 'SPC_O3'
                 varname=prefix+tracer
                 # extract the data directly by the key
-                data=fh[varname][time,:,:,:]
-    
+                data=fh[varname][:]
+                # average time of get one time slice?
+                if avg_time:
+                    data=data.mean(axis=0)
+                else:
+                    data=data[time,:,:,:]    
+                # flip lev dimension of data?
                 if flip: data=data[::-1,:,:]
                 self.data1.append(data)
+                # save the units of the data 
+                self.data1_tracer_units[tracer] = fh[varname].ctm_units
 
         # always remember to close the NC file
         fh.close() 
@@ -173,7 +195,7 @@ class benchmark:
         self.model1=tag # for plot names
         
     def getdata2(self,filename,tag='model2',
-                 prefix='SPC_',time=0,flip=False):
+                 prefix='IJ_AVG_S__',time=0,flip=False,avg_time=False):
         '''
         Get data from the 2nd model, with the tracerlist got from getdata1 
         Must run getdata1 first. data2 will match data1's tracer sequence. 
@@ -193,31 +215,67 @@ class benchmark:
             
         # open the netcdf file with read-only mode
         fh = Dataset(filename, "r", format="NETCDF4")
-            
-        # check dimension 
-        if self.Nlon != len(fh['lon'][:]):
-            raise ValueError('lon dimension does not match')
-        if self.Nlat != len(fh['lat'][:]):
-            raise ValueError('lat dimension does not match')
-        if self.Nlev != len(fh['lev'][:]):
-            raise ValueError('lev dimension does not match')
 
+        # Temporally set override coridinate variable names
+#        nc_lon_var = 'lon'
+#        nc_lat_var = 'lat'
+#        nc_lev_var = 'lev'
+        nc_lon_var = 'longitude'
+        nc_lat_var = 'latitude'
+        nc_lev_var = 'model_level_number'#'dim3'
+        print( [ i for i in fh.variables ] )
+        # get dimension info
+        # use len() instead of .size for compatibility with python2
+
+        # check dimension 
+        if self.Nlon != len(fh[nc_lon_var][:]):
+            raise ValueError('lon dimension does not match')
+        if self.Nlat != len(fh[nc_lat_var][:]):
+            raise ValueError('lat dimension does not match')
+#        if self.Nlev != len(fh[nc_lev_var][:]):
+#            raise ValueError('lev dimension does not match')
+        
         # initialize an empty list to hold the data.
         self.data2=[]
+
+        # initialize an empty dictionary to hold the units
+        self.data2_tracer_units={}        
             
         for tracer in self.tracername:
             # expand, for example, 'O3' to 'SPC_O3'
             varname=prefix+tracer
             # extract the data directly by the key
-            data=fh[varname][time,:,:,:]
-    
+            data=fh[varname][:]
+            # average time of get one time slice?
+            if avg_time:
+                data=data.mean(axis=0)
+            else:
+                data=data[time,:,:,:] 
+            # flip lev dimension of data?
             if flip: data=data[::-1,:,:]
             self.data2.append(data)
+            # save the units of the data 
+            self.data2_tracer_units[tracer] = fh[varname].ctm_units
             
         # always remember to close the NC file
         fh.close() 
         
         self.model2=tag # for plot names
+
+#     def convert_NetCDF_shape(self, arr):
+#         """
+#         Convert PyGChem(iris) array arrangement to COARDS
+#         
+#         PyGChem(iris) saves NetCDF files with 
+# 
+#         e.g. 
+#         (time, longitude, latitude, model_level_number)
+#         instead of 
+#         (time,lev,lat,lon)
+#         of Fortran read
+#         (lon,lat,lev,time)
+#         
+#         """
         
     def getdata0(self,filename,
                  prefix='SPC_',time=0,flip=False):
@@ -327,14 +385,23 @@ class benchmark:
                 
                 # assume v/v, convert to ppbv
                 # might need modification in the future
-                data1 = self.data1[i_tracer][lev,:,:]*1e9
-                data2 = self.data2[i_tracer][lev,:,:]*1e9
-                unit='ppbv'
+                # TMS EDIT - PyGChem/iris save to NetCDF alters aixs order
+                # Update from (time, longitude, latitude, model_level_number)
+                # to: (time,lev,lat,lon)
+#                data1 = self.data1[i_tracer][lev,:,:]#*1e9
+#                data2 = self.data2[i_tracer][lev,:,:]#*1e9
+                data1 = self.data1[i_tracer][:,:,lev].T#*1e9
+                data2 = self.data2[i_tracer][:,:,lev].T#*1e9
+#                unit self.data2_tracer_units
+                unit = self.data2_tracer_units[tracername]
+#                unit='ppbv'
                 
                 if plot_change:
                     # plot the change with respect to the initial condition,
                     # instead to the original field
-                    data0 = self.data0[i_tracer][lev,:,:]*1e9
+                    # Update axis order 
+#                    data0 = self.data0[i_tracer][lev,:,:]#*1e9
+                    data0 = self.data0[i_tracer][:,:,lev].T#*1e9
                     data1 -= data0
                     data2 -= data0
                     cmap=plt.cm.RdBu_r
@@ -343,13 +410,15 @@ class benchmark:
                     cmap=ga.WhGrYlRd
                 
                 if np.max(np.abs(data1)) < 1e-1 :
-                    data1 *= 1e3
-                    data2 *= 1e3
-                    unit='pptv'             
+                    if unit=='ppbv':
+                        data1 *= 1e3
+                        data2 *= 1e3
+                        unit='pptv'             
                 elif np.max(np.abs(data1)) > 1e3 :
-                    data1 /= 1e3
-                    data2 /= 1e3
-                    unit='ppmv'
+                    if unit=='ppbv':
+                        data1 /= 1e3
+                        data2 /= 1e3
+                        unit='ppmv'
                                   
                 # use the same scale for data1 and data2
                 # use the scale of data2 by default.
@@ -473,14 +542,23 @@ class benchmark:
                 
                 # assume v/v, convert to ppbv
                 # might need modification in the future
-                data1 = self.data1[i_tracer][lev,:,:]*1e9
-                data2 = self.data2[i_tracer][lev,:,:]*1e9
-                unit='ppbv'
+                # TMS EDIT - PyGChem/iris save to NetCDF alters aixs order
+                # Update from (time, longitude, latitude, model_level_number)
+                # to: (time,lev,lat,lon)
+#                data1 = self.data1[i_tracer][lev,:,:]#*1e9
+#                data2 = self.data2[i_tracer][lev,:,:]#*1e9
+                data1 = self.data1[i_tracer][:,:,lev].T#*1e9
+                data2 = self.data2[i_tracer][:,:,lev].T#*1e9
+#                unit self.data2_tracer_units
+                unit = self.data2_tracer_units[tracername]
+#                unit='ppbv'
                 
                 if plot_change:
                     # plot the change with respect to the initial condition,
                     # instead to the original field
-                    data0 = self.data0[i_tracer][lev,:,:]*1e9
+                    # Update axis order 
+#                    data0 = self.data0[i_tracer][lev,:,:]*1e9
+                    data0 = self.data0[i_tracer][:,:,lev].T#*1e9
                     data1 -= data0
                     data2 -= data0
                     cmap=plt.cm.RdBu_r
@@ -489,13 +567,15 @@ class benchmark:
                     cmap=ga.WhGrYlRd
                 
                 if np.max(np.abs(data1)) < 1e-1 :
-                    data1 *= 1e3
-                    data2 *= 1e3
-                    unit='pptv'             
+                    if unit=='ppbv':
+                        data1 *= 1e3
+                        data2 *= 1e3
+                        unit='pptv'             
                 elif np.max(np.abs(data1)) > 1e3 :
-                    data1 /= 1e3
-                    data2 /= 1e3
-                    unit='ppmv'
+                    if unit=='ppbv':
+                        data1 /= 1e3
+                        data2 /= 1e3
+                        unit='ppmv'
                                   
                 # use the same scale for data1 and data2
                 # use the scale of data2 by default.
@@ -680,8 +760,13 @@ class benchmark:
                     press = levs72_hPa
                 else:
                     lev = self.lev[levs[0]:levs[1]]
-                    data1_3D=data1_3D[levs[0]:levs[1],:,:]
-                    data2_3D=data2_3D[levs[0]:levs[1],:,:]
+                    # TMS EDIT - PyGChem/iris save to NetCDF alters aixs order
+                    # Update from (time, longitude, latitude, model_level_number)
+                    # to: (time,lev,lat,lon)
+#                    data1_3D=data1_3D[levs[0]:levs[1],:,:]
+#                    data2_3D=data2_3D[levs[0]:levs[1],:,:]
+                    data1_3D=data1_3D[:,:,levs[0]:levs[1]].T
+                    data2_3D=data2_3D[:,:,levs[0]:levs[1]].T
                     press = levs72_hPa[levs[0]:levs[1]]
 
                 # Reverse the y-axis in the plot so that P is decreasing up
@@ -698,18 +783,21 @@ class benchmark:
                     
                 # assume v/v, convert to ppbv
                 # might need modification in the future
-                data1 *= 1e9
-                data2 *= 1e9
-                unit='ppbv'
+#                data1 *= 1e9
+#                data2 *= 1e9
+#                unit='ppbv'
+                unit = self.data2_tracer_units[tracername]
 
                 if np.max(data1) < 1e-1 :
-                    data1 *= 1e3
-                    data2 *= 1e3
-                    unit='pptv'                    
+                    if unit=='ppbv':
+                        data1 *= 1e3
+                        data2 *= 1e3
+                        unit='pptv'                    
                 elif np.max(data1) > 1e3 :
-                    data1 /= 1e3
-                    data2 /= 1e3
-                    unit='ppmv'
+                    if unit=='ppbv':
+                        data1 /= 1e3
+                        data2 /= 1e3
+                        unit='ppmv'
                     
                 # use the same scale for data1 and data2
                 # use the scale of data2 by default.
@@ -1129,6 +1217,7 @@ class benchmark:
                             tag='zonal mean trop',
                             switch_scale=switch_scale,
                             plot_change=plot_change)
+
         if plot_zonal_strat_180lon_diff:
             self.plot_zonal(pdfname=self.shortname+tag
                             +'_strat_180lon.pdf',
