@@ -1,3 +1,11 @@
+TMS - forked dev. GCpy from GCST. Updated to work with NetCDF output processed by PyGChem.
+
+Please see main repo for updates, detail etc: https://bitbucket.org/gcst/gcpy
+
+All credit to GCST: https://bitbucket.org/account/user/gcst/projects/GEOS
+
+-------- Original README.md
+
 # GCPy
 
 A comprehensive python tool for the GEOS-Chem model with the focus on:
